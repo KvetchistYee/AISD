@@ -40,7 +40,7 @@ List* listItem(List* beg, int index, bool errMsg = true)
     while (beg && (index--))
         beg = beg->next;
     if (errMsg && !beg)
-        cout << "Элемент списка отсутствует \n";
+        cout << "There is no element \n";
     return beg;
 }
 
@@ -103,7 +103,7 @@ List* insItem(List*& beg, int index, int value)
 }
 
 void printList(List* beg) {
-    cout << endl << "Сформированный список: ";
+    cout << endl << "Created list: ";
     while (beg) {
         cout << beg->data << " ";
         beg = beg->next;
@@ -135,7 +135,7 @@ bool isFull(Stack* stack) {
 
 void push(Stack* stack, int value) {
     if (isFull(stack)) {
-        cout << "Стек переполнен" << endl;
+        cout << "Stack overflow" << endl;
         return;
     }
     stack->stackArr[++stack->top] = value;
@@ -143,7 +143,7 @@ void push(Stack* stack, int value) {
 
 int pop(Stack* stack) {
     if (isEmpty(stack)) {
-        cout << "Стек пуст" << endl;
+        cout << "Stack is empty" << endl;
         return -1;
     }
     return stack->stackArr[stack->top--];
@@ -151,7 +151,7 @@ int pop(Stack* stack) {
 
 int peek(Stack* stack) {
     if (isEmpty(stack)) {
-        cout << "Стек пуст" << endl;
+        cout << "Stack is empty" << endl;
         return -1;
     }
     return stack->stackArr[stack->top];
@@ -168,7 +168,7 @@ int* createDynArr(int size) {
 }
 
 void printDynArray(int* arr, int size) {
-    cout << "Массив: ";
+    cout << "Array: ";
     for (int i = 0; i < size; i++) {
         cout << arr[i] << " ";
     }
@@ -187,7 +187,7 @@ int* addElement(int* dynArr, int size, int item) {
 
 int* removeElement(int* dynArr, int size, int index) {
     if (index < 0 || index >= size) {
-        cout << "Неверный индекс" << endl;
+        cout << "Invalid index" << endl;
         return dynArr;
     }
     int* newArr = new int[size - 1];
@@ -206,7 +206,7 @@ void deleteArray(int* arr) {
     delete[] arr;
 }
 
-int priroty(char op) {
+int priority(char op) {
     switch (op) {
     case '+':
     case '-':
@@ -216,8 +216,8 @@ int priroty(char op) {
         return 2;
     case '^':
         return 3;
-    case 'sin':
-    case 'cos':
+    case 's':
+    case 'c':
         return 4;
     default:
         return -1;
@@ -225,7 +225,7 @@ int priroty(char op) {
 }
 
 bool isOperator(char c) {
-    return c == '+' || c == '-' || c == '*' || c == '/' || c == '^';
+    return c == '+' || c == '-' || c == '*' || c == '/' || c == '^' || c == 's' || c == 'c';
 }
 
 bool isFunction(const string& infix, size_t i) {
@@ -274,16 +274,31 @@ string toPostfix(const string& infix) {
                 postfix += ' ';
                 pop(s);
             }
-            if (!isEmpty(s))
+            if (!isEmpty(s)) {
                 pop(s);
+                if (!isEmpty(s) && (peek(s) == 's' || peek(s) == 'c')) {
+                    postfix += peek(s);
+                    postfix += ' ';
+                    pop(s);
+                }
+            }
             else
                 return "Invalid input";
         }
-        else if (priroty(c) > 0) {
-            while (!isEmpty(s) && priroty(peek(s)) >= priroty(c)) {
-                postfix += peek(s);
-                postfix += ' ';
-                pop(s);
+        else if (priority(c) > 0) {
+            if (c == '^') {
+                while (!isEmpty(s) && priority(peek(s)) > priority(c)) {
+                    postfix += peek(s);
+                    postfix += ' ';
+                    pop(s);
+                }
+            }
+            else {
+                while (!isEmpty(s) && priority(peek(s)) >= priority(c)) {
+                    postfix += peek(s);
+                    postfix += ' ';
+                    pop(s);
+                }
             }
             push(s, c);
         }
@@ -305,8 +320,8 @@ string toPostfix(const string& infix) {
 int main()
 {
     string expression;
-    cout << "Напишите выражение: ";
+    cout << "Enter expression: ";
     getline(cin, expression);
     string result = toPostfix(expression);
-    cout << "Обратная польская нотация : " << result << endl;
+    cout << "Sorting station : " << result << endl;
 }
