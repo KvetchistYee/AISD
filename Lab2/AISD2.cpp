@@ -5,64 +5,9 @@ using namespace std;
 struct RunInfo {
     int start;
     int length;
-    RunInfo() : start(0), length(0) {}  // Конструктор по умолчанию
+    RunInfo() : start(0), length(0) {}
     RunInfo(int s, int len) : start(s), length(len) {}
 };
-
-struct Stack {
-    int top;
-    int stackSize;
-    RunInfo* stackArr;
-};
-
-Stack* createStack(int size) {
-    Stack* stack = new Stack;
-    stack->stackSize = size;
-    stack->top = -1;
-    stack->stackArr = new RunInfo[size];
-    return stack;
-}
-
-bool isEmpty(Stack* stack) {
-    return stack->top == -1;
-}
-
-bool isFull(Stack* stack) {
-    return stack->top == stack->stackSize - 1;
-}
-
-void push(Stack* stack, RunInfo run) {
-    if (isFull(stack)) {
-        cout << "Stack overflow" << endl;
-        return;
-    }
-    stack->stackArr[++stack->top] = run;
-}
-
-RunInfo pop(Stack* stack) {
-    if (isEmpty(stack)) {
-        cout << "Stack is empty" << endl;
-        return RunInfo(-1, -1);
-    }
-    return stack->stackArr[stack->top--];
-}
-
-RunInfo peek(Stack* stack) {
-    if (isEmpty(stack)) {
-        cout << "Stack is empty" << endl;
-        return RunInfo(-1, -1);
-    }
-    return stack->stackArr[stack->top];
-}
-
-int size(Stack* stack) {
-    return stack->top + 1;
-}
-
-void deleteStack(Stack* stack) {
-    delete[] stack->stackArr;
-    delete stack;
-}
 
 int getMinrun(int n) {
     int r = 0;
@@ -92,7 +37,6 @@ void insertionSort(int arr[], int left, int right)
     }
 }
 
-// Custom reverse function
 void reverseArray(int arr[], int start, int end) {
     while (start < end) {
         int temp = arr[start];
@@ -139,8 +83,7 @@ int binarySearch(int arr[], int left, int right, int target) {
 
 void mergeWithGallop(int arr[], int l, int m, int r) {
     int len1 = m - l + 1, len2 = r - m;
-    
-    // Use dynamic arrays instead of vectors
+
     int* left = new int[len1];
     int* right = new int[len2];
     
@@ -188,72 +131,32 @@ void mergeWithGallop(int arr[], int l, int m, int r) {
     
     while (i < len1) arr[k++] = left[i++];
     while (j < len2) arr[k++] = right[j++];
-    
-    // Clean up memory
+
     delete[] left;
     delete[] right;
 }
 
-// Custom min function
 int min(int a, int b) {
     return (a < b) ? a : b;
 }
 
 void timSort(int arr[], int n) {
     if (n < 2) return;
-    
+
     int minrun = getMinrun(n);
-    Stack* runs = createStack(n);
-    
-    int i = 0;
-    while (i < n) {
-        int runLength = findRunLength(arr, i, n);
- 
-        if (runLength < minrun) {
-            int remaining = min(minrun, n - i);
-            insertionSort(arr, i, i + remaining - 1);
-            runLength = remaining;
-        }
- 
-        push(runs, RunInfo(i, runLength));
- 
-        while (size(runs) >= 2) {
-            RunInfo r = pop(runs);
-            RunInfo l = pop(runs);
- 
-            if (size(runs) > 0) {
-                RunInfo z = peek(runs);
-                if (z.length > l.length + r.length) {
-                    push(runs, l);
-                    push(runs, r);
-                    break;
-                }
-            }
- 
-            if (l.length > r.length) {
-                push(runs, l);
-                push(runs, r);
-                break;
-            }
- 
-            mergeWithGallop(arr, l.start, l.start + l.length - 1, 
-                           l.start + l.length + r.length - 1);
-            push(runs, RunInfo(l.start, l.length + r.length));
-        }
-        
-        i += runLength;
+
+    for (int i = 0; i < n; i += minrun) {
+        int end = min(i + minrun - 1, n - 1);
+        insertionSort(arr, i, end);
     }
- 
-    while (size(runs) > 1) {
-        RunInfo r = pop(runs);
-        RunInfo l = pop(runs);
-        
-        mergeWithGallop(arr, l.start, l.start + l.length - 1, 
-                       l.start + l.length + r.length - 1);
-        push(runs, RunInfo(l.start, l.length + r.length));
+
+    for (int size = minrun; size < n; size *= 2) {
+        for (int left = 0; left < n; left += 2 * size) {
+            int mid = min(left + size - 1, n - 1);
+            int right = min(left + 2 * size - 1, n - 1);
+            mergeWithGallop(arr, left, mid, right);
+        }
     }
-    
-    deleteStack(runs);
 }
 
 void printArray(int arr[], int n)
