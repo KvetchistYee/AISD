@@ -1,31 +1,70 @@
 #include <iostream>
-
+#include <algorithm>
 using namespace std;
 
-struct RunInfo {
+const int MIN_MERGE = 32;
+const int MAX_STACK_SIZE = 100;
+
+struct Run {
     int start;
     int length;
-    RunInfo() : start(0), length(0) {}
-    RunInfo(int s, int len) : start(s), length(len) {}
+};
+
+class RunStack {
+private:
+    Run data[MAX_STACK_SIZE];
+    int topIndex;
+
+public:
+    RunStack() : topIndex(-1) {}
+
+    bool isEmpty() const {
+        return topIndex == -1;
+    }
+
+    bool isFull() const {
+        return topIndex == MAX_STACK_SIZE - 1;
+    }
+
+    void push(int start, int length) {
+        if (!isFull()) {
+            topIndex++;
+            data[topIndex].start = start;
+            data[topIndex].length = length;
+        }
+    }
+
+    Run pop() {
+        if (!isEmpty()) {
+            Run result = data[topIndex];
+            topIndex--;
+            return result;
+        }
+        return Run{ 0, 0 };
+    }
+
+    Run peek(int indexFromTop = 0) const {
+        if (topIndex >= indexFromTop) {
+            return data[topIndex - indexFromTop];
+        }
+        return Run{ 0, 0 };
+    }
+
+    int size() const {
+        return topIndex + 1;
+    }
 };
 
 int getMinrun(int n) {
     int r = 0;
-    while (n >= 64) {
+    while (n >= MIN_MERGE) {
         r |= n & 1;
         n >>= 1;
     }
     return n + r;
 }
 
-struct Run {
-    int start;
-    int length;
-    Run(int s, int len) : start(s), length(len) {}
-};
-
-void insertionSort(int arr[], int left, int right)
-{
+void insertionSort(int arr[], int left, int right) {
     for (int i = left + 1; i <= right; i++) {
         int temp = arr[i];
         int j = i - 1;
@@ -37,130 +76,196 @@ void insertionSort(int arr[], int left, int right)
     }
 }
 
-void reverseArray(int arr[], int start, int end) {
-    while (start < end) {
-        int temp = arr[start];
-        arr[start] = arr[end];
-        arr[end] = temp;
-        start++;
-        end--;
+int binarySearch(int arr[], int key, int left, int right, bool findFirstGreater = false) {
+    int low = left;
+    int high = right;
+
+    while (low <= high) {
+        int mid = low + (high - low) / 2;
+        if (arr[mid] == key) {
+            return mid;
+        }
+        else if (arr[mid] < key) {
+            low = mid + 1;
+        }
+        else {
+            high = mid - 1;
+        }
     }
+
+    return findFirstGreater ? low : high;
 }
 
-int findRunLength(int arr[], int start, int n) {
-    if (start >= n - 1) return 1;
-    
-    int length = 1;
-    bool ascending = arr[start] <= arr[start + 1];
-    
-    for (int i = start + 1; i < n - 1; i++) {
-        if ((ascending && arr[i] <= arr[i + 1]) || 
-            (!ascending && arr[i] >= arr[i + 1])) {
-            length++;
-        } else {
+int gallopLeft(int arr[], int key, int left, int right) {
+    int last = left;
+    int offset = 1;
+
+    while (last + offset <= right && arr[last + offset] <= key) {
+        last += offset;
+        offset *= 2;
+    }
+    int gallopEnd = min(last + offset, right);
+    return binarySearch(arr, key, last, gallopEnd, true);
+}
+
+int gallopRight(int arr[], int key, int left, int right) {
+    int last = right;
+    int offset = 1;
+
+    while (last - offset >= left && arr[last - offset] >= key) {
+        last -= offset;
+        offset *= 2;
+    }
+
+    int gallopStart = max(left, last - offset);
+    return binarySearch(arr, key, gallopStart, last, false) + 1;
+}
+
+void mergeWithGallop(int arr[], int left, int mid, int right) {
+    int len1 = mid - left + 1;
+    int len2 = right - mid;
+
+    int* L = new int[len1];
+    int* R = new int[len2];
+
+    for (int i = 0; i < len1; i++) L[i] = arr[left + i];
+    for (int i = 0; i < len2; i++) R[i] = arr[mid + 1 + i];
+
+    int i = 0, j = 0, k = left;
+    int gallopCount = 0;
+
+    while (i < len1 && j < len2) {
+        if (L[i] <= R[j]) {
+            arr[k++] = L[i++];
+            gallopCount++;
+        }
+        else {
+            arr[k++] = R[j++];
+            gallopCount++;
+        }
+
+        if (gallopCount >= 7) {
+            gallopCount = 0;
+
+            if (i < len1 && j < len2) {
+                if (L[i] <= R[j]) {
+                    int gallopEnd = gallopLeft(L, R[j], i, len1 - 1);
+                    while (i < gallopEnd) {
+                        arr[k++] = L[i++];
+                    }
+                }
+                else {
+                    int gallopEnd = gallopRight(R, L[i], j, len2 - 1);
+                    while (j < gallopEnd) {
+                        arr[k++] = R[j++];
+                    }
+                }
+            }
+        }
+    }
+
+    while (i < len1) arr[k++] = L[i++];
+    while (j < len2) arr[k++] = R[j++];
+
+    delete[] L;
+    delete[] R;
+}
+
+bool shouldMerge(const RunStack& stack) {
+    if (stack.size() < 3) return false;
+
+    Run X = stack.peek(2);
+    Run Y = stack.peek(1);
+    Run Z = stack.peek(0);
+
+    return (X.length <= Y.length + Z.length) || (Y.length <= Z.length);
+}
+
+void forceMerge(int arr[], RunStack& stack) {
+    while (stack.size() > 1) {
+        if (stack.size() > 2 && shouldMerge(stack)) {
+            Run Z = stack.pop();
+            Run Y = stack.pop();
+            Run X = stack.pop();
+
+            if (X.length <= Z.length) {
+                mergeWithGallop(arr, X.start, X.start + X.length - 1, Y.start + Y.length - 1);
+                stack.push(X.start, X.length + Y.length);
+                stack.push(Z.start, Z.length);
+            }
+            else {
+                mergeWithGallop(arr, Y.start, Y.start + Y.length - 1, Z.start + Z.length - 1);
+                stack.push(X.start, X.length);
+                stack.push(Y.start, Y.length + Z.length);
+            }
+        }
+        else {
             break;
         }
     }
- 
-    if (!ascending) {
-        reverseArray(arr, start, start + length);
-    }
-    
-    return length + 1;
 }
 
-int binarySearch(int arr[], int left, int right, int target) {
-    while (left < right) {
-        int mid = left + (right - left) / 2;
-        if (arr[mid] <= target) {
-            left = mid + 1;
-        } else {
-            right = mid;
+int findNaturalRun(int arr[], int start, int n) {
+    if (start >= n - 1) return 1;
+
+    int i = start;
+    while (i < n - 1 && arr[i] <= arr[i + 1]) i++;
+
+    int ascendingLength = i - start + 1;
+
+    if (ascendingLength < MIN_MERGE && start < n - 1) {
+        i = start;
+        while (i < n - 1 && arr[i] >= arr[i + 1]) i++;
+        int descendingLength = i - start + 1;
+
+        if (descendingLength > 1) {
+            int left = start;
+            int right = start + descendingLength - 1;
+            while (left < right) {
+                swap(arr[left], arr[right]);
+                left++;
+                right--;
+            }
+            return descendingLength;
         }
     }
-    return left;
-}
 
-void mergeWithGallop(int arr[], int l, int m, int r) {
-    int len1 = m - l + 1, len2 = r - m;
-
-    int* left = new int[len1];
-    int* right = new int[len2];
-    
-    for (int i = 0; i < len1; i++)
-        left[i] = arr[l + i];
-    for (int i = 0; i < len2; i++)
-        right[i] = arr[m + 1 + i];
-    
-    int i = 0, j = 0, k = l;
-    int gallop_threshold = 7;
-    
-    while (i < len1 && j < len2) {
-        int left_count = 0, right_count = 0;
- 
-        while (i < len1 && left[i] <= right[j] && left_count < gallop_threshold) {
-            arr[k++] = left[i++];
-            left_count++;
-        }
- 
-        while (j < len2 && right[j] < left[i] && right_count < gallop_threshold) {
-            arr[k++] = right[j++];
-            right_count++;
-        }
- 
-        if (left_count >= gallop_threshold) {
-            int pos = binarySearch(right, j, len2, left[i]);
-            while (j < pos) {
-                arr[k++] = right[j++];
-            }
-        } else if (right_count >= gallop_threshold) {
-            int pos = binarySearch(left, i, len1, right[j]);
-            while (i < pos) {
-                arr[k++] = left[i++];
-            }
-        }
- 
-        if (i < len1 && j < len2) {
-            if (left[i] <= right[j]) {
-                arr[k++] = left[i++];
-            } else {
-                arr[k++] = right[j++];
-            }
-        }
-    }
-    
-    while (i < len1) arr[k++] = left[i++];
-    while (j < len2) arr[k++] = right[j++];
-
-    delete[] left;
-    delete[] right;
-}
-
-int min(int a, int b) {
-    return (a < b) ? a : b;
+    return ascendingLength;
 }
 
 void timSort(int arr[], int n) {
-    if (n < 2) return;
+    if (n <= 1) return;
 
-    int minrun = getMinrun(n);
+    int minRun = getMinrun(n);
+    RunStack stack;
 
-    for (int i = 0; i < n; i += minrun) {
-        int end = min(i + minrun - 1, n - 1);
-        insertionSort(arr, i, end);
+    int i = 0;
+    while (i < n) {
+        int naturalRunLen = findNaturalRun(arr, i, n);
+        int currentRunLen;
+
+        if (naturalRunLen < minRun) {
+            currentRunLen = min(minRun, n - i);
+            insertionSort(arr, i, i + currentRunLen - 1);
+        }
+        else {
+            currentRunLen = naturalRunLen;
+        }
+
+        stack.push(i, currentRunLen);
+        forceMerge(arr, stack);
+        i += currentRunLen;
     }
 
-    for (int size = minrun; size < n; size *= 2) {
-        for (int left = 0; left < n; left += 2 * size) {
-            int mid = min(left + size - 1, n - 1);
-            int right = min(left + 2 * size - 1, n - 1);
-            mergeWithGallop(arr, left, mid, right);
-        }
+    while (stack.size() > 1) {
+        Run Z = stack.pop();
+        Run Y = stack.pop();
+        mergeWithGallop(arr, Y.start, Y.start + Y.length - 1, Z.start + Z.length - 1);
+        stack.push(Y.start, Y.length + Z.length);
     }
 }
 
-void printArray(int arr[], int n)
-{
+void printArray(int arr[], int n) {
     for (int i = 0; i < n; i++)
         cout << arr[i] << "  ";
     cout << endl;
@@ -169,12 +274,12 @@ void printArray(int arr[], int n)
 int* inputArray(int& n) {
     cout << "Enter the size of array: ";
     cin >> n;
-    
+
     if (n <= 0) {
         cout << "ERROR: Invalid array size" << endl;
         return nullptr;
     }
-    
+
     int* arr = new int[n];
     cout << "Enter " << n << " elements(enter through a spacebar): ";
     for (int i = 0; i < n; i++) {
@@ -183,9 +288,7 @@ int* inputArray(int& n) {
     return arr;
 }
 
-int main()
-{
-
+int main() {
     int* arr;
     int n;
 
@@ -193,7 +296,7 @@ int main()
     if (arr == nullptr) {
         return 1;
     }
-    
+
     cout << "\nOriginal array:" << endl;
     printArray(arr, n);
 
@@ -201,11 +304,10 @@ int main()
     cout << "Calculated minrun = " << minrun << endl;
 
     timSort(arr, n);
-    
+
     cout << "\nSorting result:" << endl;
     printArray(arr, n);
-    
+
     delete[] arr;
-    
     return 0;
 }
