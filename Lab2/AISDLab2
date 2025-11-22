@@ -108,7 +108,8 @@ int gallop(int arr[], int key, int left, int right, bool findRightBound = false)
 
         int gallopStart = max(left, last - offset);
         return binarySearch(arr, key, gallopStart, last, false) + 1;
-    } else {
+    }
+    else {
         int last = left;
         int offset = 1;
 
