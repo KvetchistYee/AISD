@@ -96,29 +96,29 @@ int binarySearch(int arr[], int key, int left, int right, bool findFirstGreater 
     return findFirstGreater ? low : high;
 }
 
-int gallopLeft(int arr[], int key, int left, int right) {
-    int last = left;
-    int offset = 1;
+int gallop(int arr[], int key, int left, int right, bool findRightBound = false) {
+    if (findRightBound) {
+        int last = right;
+        int offset = 1;
 
-    while (last + offset <= right && arr[last + offset] <= key) {
-        last += offset;
-        offset *= 2;
+        while (last - offset >= left && arr[last - offset] >= key) {
+            last -= offset;
+            offset *= 2;
+        }
+
+        int gallopStart = max(left, last - offset);
+        return binarySearch(arr, key, gallopStart, last, false) + 1;
+    } else {
+        int last = left;
+        int offset = 1;
+
+        while (last + offset <= right && arr[last + offset] <= key) {
+            last += offset;
+            offset *= 2;
+        }
+        int gallopEnd = min(last + offset, right);
+        return binarySearch(arr, key, last, gallopEnd, true);
     }
-    int gallopEnd = min(last + offset, right);
-    return binarySearch(arr, key, last, gallopEnd, true);
-}
-
-int gallopRight(int arr[], int key, int left, int right) {
-    int last = right;
-    int offset = 1;
-
-    while (last - offset >= left && arr[last - offset] >= key) {
-        last -= offset;
-        offset *= 2;
-    }
-
-    int gallopStart = max(left, last - offset);
-    return binarySearch(arr, key, gallopStart, last, false) + 1;
 }
 
 void mergeWithGallop(int arr[], int left, int mid, int right) {
@@ -149,13 +149,13 @@ void mergeWithGallop(int arr[], int left, int mid, int right) {
 
             if (i < len1 && j < len2) {
                 if (L[i] <= R[j]) {
-                    int gallopEnd = gallopLeft(L, R[j], i, len1 - 1);
+                    int gallopEnd = gallop(L, R[j], i, len1 - 1, false);
                     while (i < gallopEnd) {
                         arr[k++] = L[i++];
                     }
                 }
                 else {
-                    int gallopEnd = gallopRight(R, L[i], j, len2 - 1);
+                    int gallopEnd = gallop(R, L[i], j, len2 - 1, true);
                     while (j < gallopEnd) {
                         arr[k++] = R[j++];
                     }
