@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36603.0 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AISDLAB3", "AISDLAB3.vcxproj", "{8ECF812B-D7C1-4C1E-A3CE-4A76E52C0CEA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8ECF812B-D7C1-4C1E-A3CE-4A76E52C0CEA}.Debug|x64.ActiveCfg = Debug|x64
+		{8ECF812B-D7C1-4C1E-A3CE-4A76E52C0CEA}.Debug|x64.Build.0 = Debug|x64
+		{8ECF812B-D7C1-4C1E-A3CE-4A76E52C0CEA}.Debug|x86.ActiveCfg = Debug|Win32
+		{8ECF812B-D7C1-4C1E-A3CE-4A76E52C0CEA}.Debug|x86.Build.0 = Debug|Win32
+		{8ECF812B-D7C1-4C1E-A3CE-4A76E52C0CEA}.Release|x64.ActiveCfg = Release|x64
+		{8ECF812B-D7C1-4C1E-A3CE-4A76E52C0CEA}.Release|x64.Build.0 = Release|x64
+		{8ECF812B-D7C1-4C1E-A3CE-4A76E52C0CEA}.Release|x86.ActiveCfg = Release|Win32
+		{8ECF812B-D7C1-4C1E-A3CE-4A76E52C0CEA}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FDFE2EB3-2DFC-4445-8581-56E8663F3E3F}
+	EndGlobalSection
+EndGlobal
