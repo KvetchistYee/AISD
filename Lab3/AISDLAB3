@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <limits>
 
 using namespace std;
 
@@ -367,7 +368,9 @@ void fixDelete(RBNode*& root, RBNode* node) {
             }
         }
     }
-    node->isRed = false;
+    if (node != nullptr) {
+        node->isRed = false;
+    }
 }
 
 RBNode* deleteRB(RBNode* root, int value) {
@@ -470,20 +473,18 @@ RBNode* deleteRB(RBNode* root, int value) {
 
         delete nodeToDelete;
 
-        if (!originalColor && child != nullptr) {
-            fixDelete(root, child);
+        if (!originalColor) {
+            if (child != nullptr) {
+                fixDelete(root, child);
+            }
+            else {
+                RBNode* dummy = new RBNode(-1);
+                dummy->parent = successor;
+                dummy->isRed = false;
+                fixDelete(root, dummy);
+                delete dummy;
+            }
         }
-    }
-
-    if (!originalColor && child == nullptr && nodeToDelete->parent != nullptr) {
-        RBNode* dummy = new RBNode(-1);
-        dummy->parent = nodeToDelete->parent;
-        dummy->isRed = false;
-        fixDelete(root, dummy);
-        delete dummy;
-    }
-    else if (!originalColor) {
-        fixDelete(root, child);
     }
 
     return root;
@@ -506,11 +507,13 @@ bool searchRB(RBNode* root, int value) {
 }
 
 void printRBNode(RBNode* node) {
+    if (node == nullptr) return;
+
     if (node->isRed) {
-        cout << "\033[1;31m" << node->data << "\033[0m ";
+        cout << node->data << "R ";
     }
     else {
-        cout << node->data << " ";
+        cout << node->data << "B ";
     }
 }
 
@@ -651,6 +654,34 @@ void freeRBTree(RBNode* root) {
     delete root;
 }
 
+void displayMenu() {
+    cout << "\n1. Display tree traversals" << endl;
+    cout << "2. Insert element" << endl;
+    cout << "3. Delete element" << endl;
+    cout << "4. Search element" << endl;
+    cout << "5. Exit" << endl;
+    cout << "Choose an option (1-5): ";
+}
+
+void displayTraversals(RBNode* root) {
+    cout << endl;
+    cout << "1) Level-order (BFS):      ";
+    BFS(root);
+    cout << endl;
+
+    cout << "2) Pre-order traversal:    ";
+    preorder(root);
+    cout << endl;
+
+    cout << "3) In-order traversal:     ";
+    inorder(root);
+    cout << endl;
+
+    cout << "4) Post-order traversal:   ";
+    postorder(root);
+    cout << endl;
+}
+
 int main() {
     string input;
     ifstream file("tree.txt");
@@ -661,7 +692,7 @@ int main() {
     }
     else {
         input = "(8 (9 (5)) (1))";
-        cout << "File not found, using default example" << endl;
+        cout << "File not found, using default example: " << input << endl;
     }
 
     cout << "Input string: " << input << endl;
@@ -679,44 +710,93 @@ int main() {
         cout << "Parsing error: Invalid binary tree format" << endl;
         return 1;
     }
-
-    cout << "\nBasic Tree Analysis:" << endl;
     cout << "Recursive DFS traversal: ";
     dfs(tree);
     cout << endl;
-
-    cout << "\nBuilding Red-Black Tree..." << endl;
     RBNode* rbTree = createRBFromTree(tree);
 
-    cout << "\nRED-BLACK TREE TRAVERSALS:" << endl;
+    int choice;
+    int value;
+    bool running = true;
 
-    cout << "1) Level-order (BFS):      ";
-    BFS(rbTree);
-    cout << endl;
+    while (running) {
+        displayMenu();
+        cin >> choice;
 
-    cout << "2) Pre-order traversal:    ";
-    preorder(rbTree);
-    cout << endl;
+        switch (choice) {
+        case 1:
+            displayTraversals(rbTree);
+            break;
 
-    cout << "3) In-order traversal:     ";
-    inorder(rbTree);
-    cout << endl;
+        case 2:
+            cout << "Enter value to insert: ";
+            cin >> value;
+            if (cin.fail()) {
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "Invalid input! Please enter a number." << endl;
+            }
+            else {
+                rbTree = insertRB(rbTree, value);
+                cout << "Value " << value << " inserted successfully!" << endl;
+                cout << "Tree after insertion - Level order: ";
+                BFS(rbTree);
+                cout << endl;
+            }
+            break;
 
-    cout << "4) Post-order traversal:   ";
-    postorder(rbTree);
-    cout << endl << endl;
+        case 3:
+            cout << "Enter value to delete: ";
+            cin >> value;
+            if (cin.fail()) {
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "Invalid input! Please enter a number." << endl;
+            }
+            else {
+                if (searchRB(rbTree, value)) {
+                    rbTree = deleteRB(rbTree, value);
+                    cout << "Value " << value << " deleted successfully!" << endl;
+                    cout << "Tree after deletion - Level order: ";
+                    BFS(rbTree);
+                    cout << endl;
+                }
+                else {
+                    cout << "Value " << value << " not found in the tree!" << endl;
+                }
+            }
+            break;
 
-    if (tree != nullptr) {
-        int demoValue = tree->data;
-        cout << "Search for " << demoValue << ": "
-            << (searchRB(rbTree, demoValue) ? "FOUND" : "NOT FOUND") << endl;
+        case 4:
+            cout << "Enter value to search: ";
+            cin >> value;
+            if (cin.fail()) {
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "Invalid input! Please enter a number." << endl;
+            }
+            else {
+                bool found = searchRB(rbTree, value);
+                cout << "Value " << value << " is " << (found ? "FOUND" : "NOT FOUND") << " in the tree" << endl;
+                if (found) {
+                    cout << "Current tree - Level order: ";
+                    BFS(rbTree);
+                    cout << endl;
+                }
+            }
+            break;
 
-        int testValue = 999;
-        cout << "Search for " << testValue << ": "
-            << (searchRB(rbTree, testValue) ? "FOUND" : "NOT FOUND") << endl;
+        case 5:
+            running = false;
+            break;
+
+        default:
+            cout << "Invalid option! Please choose 1-5." << endl;
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            break;
+        }
     }
 
-    freeTree(tree);
-    freeRBTree(rbTree);
     return 0;
 }
