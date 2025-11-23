@@ -738,7 +738,6 @@ int main() {
             }
             else {
                 rbTree = insertRB(rbTree, value);
-                cout << "Value " << value << " inserted successfully!" << endl;
                 cout << "Tree after insertion - Level order: ";
                 BFS(rbTree);
                 cout << endl;
@@ -756,7 +755,6 @@ int main() {
             else {
                 if (searchRB(rbTree, value)) {
                     rbTree = deleteRB(rbTree, value);
-                    cout << "Value " << value << " deleted successfully!" << endl;
                     cout << "Tree after deletion - Level order: ";
                     BFS(rbTree);
                     cout << endl;
