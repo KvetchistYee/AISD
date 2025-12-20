@@ -1,0 +1,439 @@
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <iostream>
+#include <iomanip>
+#include <fstream>
+#include <cstring>
+#include <sstream>
+#include <string>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+const int MAX_VERTICES = 50;
+const int MAX_EDGES = 1225;
+const int MAX_NAME_LENGTH = 50;
+
+struct Edge {
+    char src[MAX_NAME_LENGTH];
+    char dest[MAX_NAME_LENGTH];
+    int weight;
+
+    Edge() {
+        src[0] = dest[0] = '\0';
+        weight = 0;
+    }
+
+    Edge(const char* s, const char* d, int w) {
+        strncpy(src, s, MAX_NAME_LENGTH - 1);
+        src[MAX_NAME_LENGTH - 1] = '\0';
+        strncpy(dest, d, MAX_NAME_LENGTH - 1);
+        dest[MAX_NAME_LENGTH - 1] = '\0';
+        weight = w;
+    }
+};
+
+class DSU {
+private:
+    int parent[MAX_VERTICES];
+    int rank[MAX_VERTICES];
+    int size;
+
+public:
+    DSU(int n) : size(n) {
+        initialize();
+    }
+
+    void initialize() {
+        for (int i = 0; i < size; i++) {
+            parent[i] = i;
+            rank[i] = 0;
+        }
+    }
+
+    int find(int x) {
+        if (parent[x] != x) {
+            parent[x] = find(parent[x]);
+        }
+        return parent[x];
+    }
+
+    bool unite(int x, int y) {
+        int rootX = find(x);
+        int rootY = find(y);
+
+        if (rootX == rootY) {
+            return false;
+        }
+
+        if (rank[rootX] < rank[rootY]) {
+            parent[rootX] = rootY;
+        }
+        else if (rank[rootX] > rank[rootY]) {
+            parent[rootY] = rootX;
+        }
+        else {
+            parent[rootY] = rootX;
+            rank[rootX]++;
+        }
+        return true;
+    }
+
+    bool connected(int x, int y) {
+        return find(x) == find(y);
+    }
+};
+
+class Graph {
+private:
+    char vertices[MAX_VERTICES][MAX_NAME_LENGTH];
+    int matrix[MAX_VERTICES][MAX_VERTICES];
+    int incidence[MAX_VERTICES][MAX_EDGES];
+    Edge edges[MAX_EDGES];
+    vector<pair<int, int>> adjacencyList[MAX_VERTICES];
+
+    int vertexCount;
+    int edgeCount;
+
+    int findVertexIndex(const char* vertex) const {
+        for (int i = 0; i < vertexCount; i++) {
+            if (strcmp(vertices[i], vertex) == 0) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    bool isVertexUnique(const char* vertex) const {
+        return findVertexIndex(vertex) == -1;
+    }
+
+    void buildEdgesFromMatrix() {
+        edgeCount = 0;
+        for (int i = 0; i < vertexCount; i++) {
+            for (int j = i + 1; j < vertexCount; j++) {
+                if (matrix[i][j] > 0) {
+                    edges[edgeCount] = Edge(vertices[i], vertices[j], matrix[i][j]);
+                    edgeCount++;
+                }
+            }
+        }
+    }
+
+    void buildIncidenceMatrix() {
+        for (int i = 0; i < vertexCount; i++) {
+            for (int j = 0; j < edgeCount; j++) {
+                incidence[i][j] = 0;
+            }
+        }
+
+        for (int j = 0; j < edgeCount; j++) {
+            int idx1 = findVertexIndex(edges[j].src);
+            int idx2 = findVertexIndex(edges[j].dest);
+
+            if (idx1 != -1) incidence[idx1][j] = 1;
+            if (idx2 != -1) incidence[idx2][j] = 1;
+        }
+    }
+
+    void buildAdjacencyList() {
+        for (int i = 0; i < vertexCount; i++) {
+            adjacencyList[i].clear();
+        }
+
+        for (int i = 0; i < vertexCount; i++) {
+            for (int j = 0; j < vertexCount; j++) {
+                if (matrix[i][j] > 0 && i != j) {
+                    adjacencyList[i].push_back(make_pair(j, matrix[i][j]));
+                }
+            }
+        }
+    }
+
+public:
+    Graph() : vertexCount(0), edgeCount(0) {
+        for (int i = 0; i < MAX_VERTICES; i++) {
+            for (int j = 0; j < MAX_VERTICES; j++) {
+                matrix[i][j] = 0;
+            }
+            for (int j = 0; j < MAX_EDGES; j++) {
+                incidence[i][j] = 0;
+            }
+        }
+    }
+
+    bool loadFromFile(const string& filename) {
+        ifstream file(filename);
+        if (!file.is_open()) {
+            cerr << "Ошибка: не удалось открыть файл '" << filename << "'\n";
+            return false;
+        }
+
+        string firstLine;
+        getline(file, firstLine);
+        stringstream ss(firstLine);
+
+        vertexCount = 0;
+        string vertexName;
+        while (ss >> vertexName) {
+            if (vertexCount >= MAX_VERTICES) {
+                cerr << "Ошибка: превышено максимальное количество вершин (" << MAX_VERTICES << ")\n";
+                file.close();
+                return false;
+            }
+
+            if (vertexName.length() >= MAX_NAME_LENGTH) {
+                cerr << "Ошибка: имя вершины слишком длинное: " << vertexName << "\n";
+                file.close();
+                return false;
+            }
+
+            if (!isVertexUnique(vertexName.c_str())) {
+                cerr << "Ошибка: дублирующаяся вершина: " << vertexName << "\n";
+                file.close();
+                return false;
+            }
+
+            strncpy(vertices[vertexCount], vertexName.c_str(), MAX_NAME_LENGTH - 1);
+            vertices[vertexCount][MAX_NAME_LENGTH - 1] = '\0';
+            vertexCount++;
+        }
+
+        if (vertexCount <= 0) {
+            cerr << "Ошибка: неверное количество вершин: " << vertexCount << "\n";
+            file.close();
+            return false;
+        }
+
+        for (int i = 0; i < vertexCount; i++) {
+            for (int j = 0; j < vertexCount; j++) {
+                if (!(file >> matrix[i][j])) {
+                    cerr << "Ошибка при чтении матрицы смежности\n";
+                    file.close();
+                    return false;
+                }
+
+                if (matrix[i][j] < 0) {
+                    cerr << "Ошибка: отрицательный вес ребра\n";
+                    file.close();
+                    return false;
+                }
+
+                if (matrix[i][j] > 1023) {
+                    cerr << "Ошибка: вес ребра превышает максимальное значение (1023)\n";
+                    file.close();
+                    return false;
+                }
+            }
+        }
+
+        file.close();
+
+        for (int i = 0; i < vertexCount; i++) {
+            for (int j = i + 1; j < vertexCount; j++) {
+                if (matrix[i][j] != matrix[j][i]) {
+                    cerr << "Предупреждение: матрица не симметрична в ["
+                        << vertices[i] << "," << vertices[j] << "]\n";
+                }
+            }
+        }
+
+        buildEdgesFromMatrix();
+        buildIncidenceMatrix();
+        buildAdjacencyList();
+
+        return true;
+    }
+
+    void DFS(int startIndex, bool visited[]) const {
+        visited[startIndex] = true;
+
+        for (const auto& neighbor : adjacencyList[startIndex]) {
+            if (!visited[neighbor.first]) {
+                DFS(neighbor.first, visited);
+            }
+        }
+    }
+
+    void BFS(int startIndex, bool visited[]) const {
+        int queue[MAX_VERTICES];
+        int front = 0, rear = 0;
+
+        visited[startIndex] = true;
+        queue[rear++] = startIndex;
+
+        while (front < rear) {
+            int current = queue[front++];
+
+            for (const auto& neighbor : adjacencyList[current]) {
+                if (!visited[neighbor.first]) {
+                    visited[neighbor.first] = true;
+                    queue[rear++] = neighbor.first;
+                }
+            }
+        }
+    }
+
+    bool isConnected() const {
+        if (vertexCount == 0) return true;
+
+        bool visited[MAX_VERTICES] = { false };
+        DFS(0, visited);
+
+        for (int i = 0; i < vertexCount; i++) {
+            if (!visited[i]) return false;
+        }
+        return true;
+    }
+
+    int getVertexCount() const { return vertexCount; }
+    int getEdgeCount() const { return edgeCount; }
+    const Edge* getAllEdges() const { return edges; }
+
+    const char* getVertexName(int index) const {
+        if (index >= 0 && index < vertexCount) {
+            return vertices[index];
+        }
+        return "INVALID";
+    }
+
+    int getVertexIndex(const char* name) const {
+        return findVertexIndex(name);
+    }
+
+    int getEdgeWeight(int i, int j) const {
+        if (i >= 0 && i < vertexCount && j >= 0 && j < vertexCount) {
+            return matrix[i][j];
+        }
+        return 0;
+    }
+};
+
+void bubbleSortEdges(Edge edges[], int n) {
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = 0; j < n - i - 1; j++) {
+            if (edges[j].weight > edges[j + 1].weight) {
+                Edge temp = edges[j];
+                edges[j] = edges[j + 1];
+                edges[j + 1] = temp;
+            }
+        }
+    }
+}
+
+bool compareEdges(const Edge& a, const Edge& b) {
+    int cmpSrc = strcmp(a.src, b.src);
+    if (cmpSrc < 0) return true;
+    if (cmpSrc > 0) return false;
+    return strcmp(a.dest, b.dest) < 0;
+}
+
+class KruskalAlgorithm {
+private:
+    Edge mstEdges[MAX_VERTICES];
+    int mstCount;
+    int totalWeight;
+
+public:
+    KruskalAlgorithm() : mstCount(0), totalWeight(0) {}
+
+    bool findMST(const Edge edges[], int edgeCount, const Graph& graph) {
+        mstCount = 0;
+        totalWeight = 0;
+
+        if (edgeCount == 0) {
+            cerr << "Граф не содержит ребер\n";
+            return false;
+        }
+
+        if (!graph.isConnected()) {
+            cerr << "Ошибка: граф несвязный\n";
+            return false;
+        }
+
+        Edge sortedEdges[MAX_EDGES];
+        for (int i = 0; i < edgeCount; i++) {
+            sortedEdges[i] = edges[i];
+        }
+
+        bubbleSortEdges(sortedEdges, edgeCount);
+
+        DSU dsu(graph.getVertexCount());
+
+        for (int i = 0; i < edgeCount && mstCount < graph.getVertexCount() - 1; i++) {
+            int idx1 = graph.getVertexIndex(sortedEdges[i].src);
+            int idx2 = graph.getVertexIndex(sortedEdges[i].dest);
+
+            if (idx1 == -1 || idx2 == -1) {
+                continue;
+            }
+
+            if (dsu.unite(idx1, idx2)) {
+                mstEdges[mstCount++] = sortedEdges[i];
+                totalWeight += sortedEdges[i].weight;
+            }
+        }
+
+        if (mstCount != graph.getVertexCount() - 1) {
+            cerr << "Ошибка: не удалось построить полное MST\n";
+            return false;
+        }
+
+        return true;
+    }
+
+    void printResult() const {
+        Edge sortedMST[MAX_VERTICES];
+        for (int i = 0; i < mstCount; i++) {
+            sortedMST[i] = mstEdges[i];
+
+            if (strcmp(sortedMST[i].src, sortedMST[i].dest) > 0) {
+                swap(sortedMST[i].src, sortedMST[i].dest);
+            }
+        }
+
+        for (int i = 0; i < mstCount - 1; i++) {
+            for (int j = 0; j < mstCount - i - 1; j++) {
+                if (!compareEdges(sortedMST[j], sortedMST[j + 1])) {
+                    swap(sortedMST[j], sortedMST[j + 1]);
+                }
+            }
+        }
+
+        for (int i = 0; i < mstCount; i++) {
+            cout << sortedMST[i].src << " " << sortedMST[i].dest << endl;
+        }
+        cout << totalWeight << endl;
+    }
+
+    int getTotalWeight() const { return totalWeight; }
+    int getMSTEdgeCount() const { return mstCount; }
+    const Edge* getMSTEdges() const { return mstEdges; }
+};
+
+int main() {
+    string filename;
+    cout << "Введите имя файла с графом: ";
+    getline(cin, filename);
+
+    if (filename.front() == '"' && filename.back() == '"') {
+        filename = filename.substr(1, filename.length() - 2);
+    }
+
+    Graph graph;
+    if (!graph.loadFromFile(filename)) {
+        cerr << "\nНе удалось загрузить граф из файла '" << filename << "'\n";
+        return 1;
+    }
+
+    KruskalAlgorithm kruskal;
+    if (!kruskal.findMST(graph.getAllEdges(), graph.getEdgeCount(), graph)) {
+        cerr << "\nОшибка при выполнении алгоритма Краскала\n";
+        return 1;
+    }
+
+    kruskal.printResult();
+
+    return 0;
+}
