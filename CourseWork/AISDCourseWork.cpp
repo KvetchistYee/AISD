@@ -6,14 +6,13 @@
 #include <cstring>
 #include <sstream>
 #include <string>
-#include <vector>
-#include <algorithm>
 
 using namespace std;
 
 const int MAX_VERTICES = 50;
 const int MAX_EDGES = 1225;
 const int MAX_NAME_LENGTH = 50;
+const int MAX_ADJACENT = 49;
 
 struct Edge {
     char src[MAX_NAME_LENGTH];
@@ -32,6 +31,11 @@ struct Edge {
         dest[MAX_NAME_LENGTH - 1] = '\0';
         weight = w;
     }
+};
+
+struct AdjNode {
+    int vertex;
+    int weight;
 };
 
 class DSU {
@@ -91,7 +95,9 @@ private:
     int matrix[MAX_VERTICES][MAX_VERTICES];
     int incidence[MAX_VERTICES][MAX_EDGES];
     Edge edges[MAX_EDGES];
-    vector<pair<int, int>> adjacencyList[MAX_VERTICES];
+
+    AdjNode adjacencyList[MAX_VERTICES][MAX_ADJACENT];
+    int adjCount[MAX_VERTICES];
 
     int vertexCount;
     int edgeCount;
@@ -139,13 +145,15 @@ private:
 
     void buildAdjacencyList() {
         for (int i = 0; i < vertexCount; i++) {
-            adjacencyList[i].clear();
+            adjCount[i] = 0;
         }
 
         for (int i = 0; i < vertexCount; i++) {
             for (int j = 0; j < vertexCount; j++) {
                 if (matrix[i][j] > 0 && i != j) {
-                    adjacencyList[i].push_back(make_pair(j, matrix[i][j]));
+                    adjacencyList[i][adjCount[i]].vertex = j;
+                    adjacencyList[i][adjCount[i]].weight = matrix[i][j];
+                    adjCount[i]++;
                 }
             }
         }
@@ -154,6 +162,7 @@ private:
 public:
     Graph() : vertexCount(0), edgeCount(0) {
         for (int i = 0; i < MAX_VERTICES; i++) {
+            adjCount[i] = 0;
             for (int j = 0; j < MAX_VERTICES; j++) {
                 matrix[i][j] = 0;
             }
@@ -248,10 +257,10 @@ public:
 
     void DFS(int startIndex, bool visited[]) const {
         visited[startIndex] = true;
-
-        for (const auto& neighbor : adjacencyList[startIndex]) {
-            if (!visited[neighbor.first]) {
-                DFS(neighbor.first, visited);
+        for (int k = 0; k < adjCount[startIndex]; k++) {
+            int neighbor = adjacencyList[startIndex][k].vertex;
+            if (!visited[neighbor]) {
+                DFS(neighbor, visited);
             }
         }
     }
@@ -265,11 +274,11 @@ public:
 
         while (front < rear) {
             int current = queue[front++];
-
-            for (const auto& neighbor : adjacencyList[current]) {
-                if (!visited[neighbor.first]) {
-                    visited[neighbor.first] = true;
-                    queue[rear++] = neighbor.first;
+            for (int k = 0; k < adjCount[current]; k++) {
+                int neighbor = adjacencyList[current][k].vertex;
+                if (!visited[neighbor]) {
+                    visited[neighbor] = true;
+                    queue[rear++] = neighbor;
                 }
             }
         }
@@ -387,16 +396,20 @@ public:
         Edge sortedMST[MAX_VERTICES];
         for (int i = 0; i < mstCount; i++) {
             sortedMST[i] = mstEdges[i];
-
             if (strcmp(sortedMST[i].src, sortedMST[i].dest) > 0) {
-                swap(sortedMST[i].src, sortedMST[i].dest);
+                char temp[MAX_NAME_LENGTH];
+                strcpy(temp, sortedMST[i].src);
+                strcpy(sortedMST[i].src, sortedMST[i].dest);
+                strcpy(sortedMST[i].dest, temp);
             }
         }
 
         for (int i = 0; i < mstCount - 1; i++) {
             for (int j = 0; j < mstCount - i - 1; j++) {
                 if (!compareEdges(sortedMST[j], sortedMST[j + 1])) {
-                    swap(sortedMST[j], sortedMST[j + 1]);
+                    Edge temp = sortedMST[j];
+                    sortedMST[j] = sortedMST[j + 1];
+                    sortedMST[j + 1] = temp;
                 }
             }
         }
