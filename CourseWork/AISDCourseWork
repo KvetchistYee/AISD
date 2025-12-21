@@ -296,6 +296,89 @@ public:
         return true;
     }
 
+    // DFS с выводом
+    void printDFS(const char* startVertex) {
+        int startIndex = getVertexIndex(startVertex);
+        if (startIndex == -1) {
+            cout << "Ошибка: вершина '" << startVertex << "' не найдена\n";
+            return;
+        }
+
+        bool visited[MAX_VERTICES] = { false };
+        int order[MAX_VERTICES];
+        int orderCount = 0;
+        int stack[MAX_VERTICES];
+        int stackTop = -1;
+
+        // Помещаем начальную вершину в стек
+        stack[++stackTop] = startIndex;
+
+        while (stackTop >= 0) {
+            int current = stack[stackTop--];
+
+            if (!visited[current]) {
+                visited[current] = true;
+                order[orderCount++] = current;
+
+                // Добавляем соседей в обратном порядке для корректного обхода
+                for (int k = adjCount[current] - 1; k >= 0; k--) {
+                    int neighbor = adjacencyList[current][k].vertex;
+                    if (!visited[neighbor]) {
+                        stack[++stackTop] = neighbor;
+                    }
+                }
+            }
+        }
+
+        // Вывод порядка обхода
+        cout << "DFS (начиная с '" << startVertex << "'): ";
+        for (int i = 0; i < orderCount; i++) {
+            cout << getVertexName(order[i]);
+            if (i < orderCount - 1) cout << " -> ";
+        }
+        cout << endl;
+    }
+
+    // BFS с выводом
+    void printBFS(const char* startVertex) {
+        int startIndex = getVertexIndex(startVertex);
+        if (startIndex == -1) {
+            cout << "Ошибка: вершина '" << startVertex << "' не найдена\n";
+            return;
+        }
+
+        bool visited[MAX_VERTICES] = { false };
+        int order[MAX_VERTICES];
+        int orderCount = 0;
+        int queue[MAX_VERTICES];
+        int front = 0, rear = 0;
+
+        visited[startIndex] = true;
+        order[orderCount++] = startIndex;
+        queue[rear++] = startIndex;
+
+        while (front < rear) {
+            int current = queue[front++];
+
+            for (int k = 0; k < adjCount[current]; k++) {
+                int neighbor = adjacencyList[current][k].vertex;
+                if (!visited[neighbor]) {
+                    visited[neighbor] = true;
+                    order[orderCount++] = neighbor;
+                    queue[rear++] = neighbor;
+                }
+            }
+        }
+
+        // Вывод порядка обхода
+        cout << "BFS (начиная с '" << startVertex << "'): ";
+        for (int i = 0; i < orderCount; i++) {
+            cout << getVertexName(order[i]);
+            if (i < orderCount - 1) cout << " -> ";
+        }
+        cout << endl;
+    }
+
     int getVertexCount() const { return vertexCount; }
     int getEdgeCount() const { return edgeCount; }
     const Edge* getAllEdges() const { return edges; }
@@ -445,8 +528,15 @@ int main() {
         cerr << "\nОшибка при выполнении алгоритма Краскала\n";
         return 1;
     }
-
+    cout << "\nАлгоритм Краскала:" << endl;
     kruskal.printResult();
+
+    cout << "\nОбходы:" << endl;
+
+    const char* startVertex = graph.getVertexName(0);
+
+    graph.printDFS(startVertex);
+    graph.printBFS(startVertex);
 
     return 0;
 }
