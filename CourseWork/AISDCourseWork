@@ -296,7 +296,6 @@ public:
         return true;
     }
 
-    // DFS с выводом
     void printDFS(const char* startVertex) {
         int startIndex = getVertexIndex(startVertex);
         if (startIndex == -1) {
@@ -310,7 +309,6 @@ public:
         int stack[MAX_VERTICES];
         int stackTop = -1;
 
-        // Помещаем начальную вершину в стек
         stack[++stackTop] = startIndex;
 
         while (stackTop >= 0) {
@@ -320,7 +318,6 @@ public:
                 visited[current] = true;
                 order[orderCount++] = current;
 
-                // Добавляем соседей в обратном порядке для корректного обхода
                 for (int k = adjCount[current] - 1; k >= 0; k--) {
                     int neighbor = adjacencyList[current][k].vertex;
                     if (!visited[neighbor]) {
@@ -330,7 +327,6 @@ public:
             }
         }
 
-        // Вывод порядка обхода
         cout << "DFS (начиная с '" << startVertex << "'): ";
         for (int i = 0; i < orderCount; i++) {
             cout << getVertexName(order[i]);
@@ -339,7 +335,6 @@ public:
         cout << endl;
     }
 
-    // BFS с выводом
     void printBFS(const char* startVertex) {
         int startIndex = getVertexIndex(startVertex);
         if (startIndex == -1) {
@@ -370,7 +365,6 @@ public:
             }
         }
 
-        // Вывод порядка обхода
         cout << "BFS (начиная с '" << startVertex << "'): ";
         for (int i = 0; i < orderCount; i++) {
             cout << getVertexName(order[i]);
